@@ -52,11 +52,11 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    # 6. 清理旧的工作流运行记录（可选）
+    # 6. 删除旧的工作流运行记录
     - name: Delete old workflow runs
       uses: Mattraks/delete-workflow-runs@v2
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         repository: ${{ github.repository }}
-        retain_days: 3
+        retain_days: 1
         keep_minimum_runs: 1
