@@ -1,2 +1,2 @@
 # RuleSet
-1
+自用sing-box规则集
