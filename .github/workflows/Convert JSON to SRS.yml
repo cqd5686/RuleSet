@@ -1,62 +1,61 @@
-name: Convert JSON to SRS
+name: Convert JSON to SRS and Push to sing-box Branch
 
 on:
   push:
     branches:
       - sing-box
-    paths:
-      - rules/*.json
+  workflow_dispatch:
 
 jobs:
-  convert-json-to-srs:
+  convert-and-push:
     runs-on: ubuntu-latest
-
     steps:
-    # 1. 检出仓库代码
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      # 1. 检出仓库代码
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # 2. 下载并解压最新的 `sing-box`
-    - name: Download and unzip `sing-box core`
-      run: |
-        # 获取最新的 sing-box alpha 版本号
-        sing_box_version=$(curl -sSL https://api.github.com/repos/SagerNet/sing-box/releases | grep 'tag_name' | grep 'alpha' | head -n 1 | sed -e 's/.*v//' -e 's/".*//')
-        
-        # 创建工具目录并下载解压 sing-box
-        mkdir -p ./tools/
-        wget "https://github.com/SagerNet/sing-box/releases/download/v${sing_box_version}/sing-box-${sing_box_version}-linux-amd64v3.tar.gz" -O - | tar -zxf - -C ./tools/
-        
-        # 移动 sing-box 可执行文件到 tools 目录
-        mv -f ./tools/sing-box-${sing_box_version}-linux-amd64v3/sing-box ./tools/
+      # 2. 下载并解压最新的 `sing-box`
+      - name: Download and unzip `sing-box core`
+        run: |
+          sing_box_version=$(curl -sSL https://api.github.com/repos/SagerNet/sing-box/releases | grep 'tag_name' | grep 'alpha' | head -n 1 | sed -e 's/.*v//' -e 's/".*//')
+          mkdir -p ./tools/
+          wget "https://github.com/SagerNet/sing-box/releases/download/v${sing_box_version}/sing-box-${sing_box_version}-linux-amd64v3.tar.gz" -O - | tar -zxf - -C ./tools/
+          mv -f ./tools/sing-box-${sing_box_version}-linux-amd64v3/sing-box ./tools/
 
-    # 3. 遍历 rules 目录下的所有 .json 文件并转换为 .srs 文件
-    - name: Convert JSON to SRS
-      run: |
-        for file in ./rules/*.json; do
-          filename=$(basename "$file" .json)
-          ./tools/sing-box rule-set compile --output ./rules/$filename.srs "$file"
-        done
+      # 3. 删除现有的 .srs 文件（确保生成新文件时没有冲突）
+      - name: Remove existing SRS files
+        run: |
+          rm -f ./rules/*.srs
 
-    # 4. 配置 git 用户信息
-    - name: Configure git
-      run: |
-        git config --local user.name "github-actions[bot]"
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+      # 4. 遍历 rules 目录下的所有 .json 文件并转换为 .srs 文件
+      - name: Convert JSON to SRS
+        run: |
+          for file in ./rules/*.json; do
+            filename=$(basename "$file" .json)
+            ./tools/sing-box rule-set compile --output ./rules/$filename.srs "$file"
+            echo "Generated SRS file: ./rules/$filename.srs"
+          done
 
-    # 5. 提交并推送 .srs 文件到 sing-box 分支
-    - name: Commit and push .srs files
-      run: |
-        git add ./rules/*.srs
-        git commit -m "Convert .json to .srs files"
-        git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git sing-box
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # 5. 配置 git 用户信息
+      - name: Configure git
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
 
-    # 6. 删除旧的工作流运行记录
-    - name: Delete old workflow runs
-      uses: Mattraks/delete-workflow-runs@v2
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        repository: ${{ github.repository }}
-        retain_days: 1
-        keep_minimum_runs: 1
+      # 6. 提交并推送 .srs 文件到 sing-box 分支
+      - name: Commit and push .srs files
+        run: |
+          git add ./rules/*.srs
+          git commit -m "Convert .json to .srs files"
+          git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git sing-box
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      # 7. 删除旧的工作流运行记录
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 3
+          keep_minimum_runs: 1
