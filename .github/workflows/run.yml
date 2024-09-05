@@ -1,12 +1,11 @@
 name: Convert JSON to SRS
 
-# 当推送到 main 分支时触发
 on:
   push:
     branches:
       - main
     paths:
-      - rules/*.json  # 仅当 rules 目录下的 .json 文件发生变化时触发
+      - rules/*.json
 
 jobs:
   convert-json-to-srs:
@@ -17,19 +16,25 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # 2. 安装 sing-box 工具
-    - name: Install sing-box
+    # 2. 下载并解压最新的 `sing-box`
+    - name: Download and unzip `sing-box core`
       run: |
-        curl -Lo sing-box https://github.com/SagerNet/sing-box/releases/latest/download/sing-box-linux-amd64
-        chmod +x sing-box
-        sudo mv sing-box /usr/local/bin/sing-box
+        # 获取最新的 sing-box alpha 版本号
+        sing_box_version=$(curl -sSL https://api.github.com/repos/SagerNet/sing-box/releases | grep 'tag_name' | grep 'alpha' | head -n 1 | sed -e 's/.*v//' -e 's/".*//')
+        
+        # 创建工具目录并下载解压 sing-box
+        mkdir -p ./tools/
+        wget "https://github.com/SagerNet/sing-box/releases/download/v${sing_box_version}/sing-box-${sing_box_version}-linux-amd64v3.tar.gz" -O - | tar -zxf - -C ./tools/
+        
+        # 移动 sing-box 可执行文件到 tools 目录
+        mv -f ./tools/sing-box-${sing_box_version}-linux-amd64v3/sing-box ./tools/
 
     # 3. 遍历 rules 目录下的所有 .json 文件并转换为 .srs 文件
     - name: Convert JSON to SRS
       run: |
         for file in ./rules/*.json; do
           filename=$(basename "$file" .json)
-          sing-box rule-set compile --output ./rules/$filename.srs $file
+          ./tools/sing-box rule-set compile --output ./rules/$filename.srs "$file"
         done
 
     # 4. 配置 git 用户信息
@@ -38,7 +43,7 @@ jobs:
         git config --local user.name "github-actions[bot]"
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
 
-    # 5. 提交并推送转换后的 .srs 文件
+    # 5. 提交并推送 .srs 文件
     - name: Commit and push .srs files
       run: |
         git add ./rules/*.srs
