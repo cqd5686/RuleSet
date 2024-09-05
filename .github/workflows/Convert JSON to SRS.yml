@@ -19,14 +19,9 @@ jobs:
     # 2. 下载并解压最新的 `sing-box`
     - name: Download and unzip `sing-box core`
       run: |
-        # 获取最新的 sing-box alpha 版本号
         sing_box_version=$(curl -sSL https://api.github.com/repos/SagerNet/sing-box/releases | grep 'tag_name' | grep 'alpha' | head -n 1 | sed -e 's/.*v//' -e 's/".*//')
-        
-        # 创建工具目录并下载解压 sing-box
         mkdir -p ./tools/
         wget "https://github.com/SagerNet/sing-box/releases/download/v${sing_box_version}/sing-box-${sing_box_version}-linux-amd64v3.tar.gz" -O - | tar -zxf - -C ./tools/
-        
-        # 移动 sing-box 可执行文件到 tools 目录
         mv -f ./tools/sing-box-${sing_box_version}-linux-amd64v3/sing-box ./tools/
 
     # 3. 遍历 rules 目录下的所有 .json 文件并转换为 .srs 文件
@@ -37,22 +32,31 @@ jobs:
           ./tools/sing-box rule-set compile --output ./rules/$filename.srs "$file"
         done
 
-    # 4. 配置 git 用户信息
+    # 4. 列出生成的 .srs 文件
+    - name: List converted files
+      run: ls -l ./rules/*.srs
+
+    # 5. 配置 git 用户信息
     - name: Configure git
       run: |
         git config --local user.name "github-actions[bot]"
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
 
-    # 5. 提交并推送 .srs 文件到 sing-box 分支
+    # 6. 添加并强制跟踪 .srs 文件
+    - name: Add and track .srs files
+      run: |
+        git add -f ./rules/*.srs
+        git status
+
+    # 7. 提交并推送 .srs 文件到 sing-box 分支
     - name: Commit and push .srs files
       run: |
-        git add ./rules/*.srs
         git commit -m "Convert .json to .srs files"
         git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git sing-box
       env:
         PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
 
-    # 6. 删除旧的工作流运行记录
+    # 8. 删除旧的工作流运行记录
     - name: Delete old workflow runs
       uses: Mattraks/delete-workflow-runs@v2
       with:
