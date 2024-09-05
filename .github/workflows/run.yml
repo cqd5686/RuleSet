@@ -43,11 +43,20 @@ jobs:
         git config --local user.name "github-actions[bot]"
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
 
-    # 5. 提交并推送 .srs 文件
+    # 5. 提交并推送 .srs 文件到 main 分支
     - name: Commit and push .srs files
       run: |
         git add ./rules/*.srs
         git commit -m "Convert .json to .srs files"
-        git push origin main
+        git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git main
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # 6. 清理旧的工作流运行记录（可选）
+    - name: Delete old workflow runs
+      uses: Mattraks/delete-workflow-runs@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        retain_days: 3
+        keep_minimum_runs: 1
