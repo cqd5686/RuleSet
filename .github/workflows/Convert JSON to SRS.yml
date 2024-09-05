@@ -48,15 +48,15 @@ jobs:
       run: |
         git add ./rules/*.srs
         git commit -m "Convert .json to .srs files"
-        git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git sing-box
+        git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git sing-box
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
 
     # 6. 删除旧的工作流运行记录
     - name: Delete old workflow runs
       uses: Mattraks/delete-workflow-runs@v2
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.PAT_TOKEN }}
         repository: ${{ github.repository }}
         retain_days: 1
         keep_minimum_runs: 1
