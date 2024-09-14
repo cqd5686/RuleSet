@@ -3,8 +3,7 @@
   "rules": [
     {
       "domain_suffix": [
-        "ouonetwork.com",
-        "metacubex.one"
+        "ouonetwork.com"
       ]
     }
   ]
